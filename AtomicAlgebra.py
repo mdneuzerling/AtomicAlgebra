@@ -1,10 +1,3 @@
-#example = "[[a,b,c,d],[b,a,0,0],[c,0,0,a],[d,0,a,0]]"
-#atomTable = AtomicAlgebra._stringToAtomTable(example)
-#nAtoms = len(atomTable[0])
-#atoms = [set([chr(i + 97)]) for i in range(nAtoms)]
-#examplePairs = [('a','a'), ('b','b'), ('c', 'd')]
-#x = AtomicAlgebra(example, examplePairs)
-
 from functools import reduce
 from itertools import chain, combinations, product, permutations
 
@@ -39,7 +32,7 @@ class AtomicAlgebra:
             self.conversePairs = conversePairs
         # set up the basic properties of the algebra.
         self._nonIdentityAtoms = None
-        self.top = functools.reduce(lambda x, y : x |y, self.atoms)
+        self.top = reduce(lambda x, y : x |y, self.atoms)
         self.zero = set()
         # need to define elements as power set of atoms
         # Combinations seems to be Sage only. Need to get a power set somehow.

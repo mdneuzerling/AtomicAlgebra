@@ -2,29 +2,6 @@ import itertools
 import time, sys
 from datetime import datetime
 
-# Simple progress bar by Brian Khuu http://stackoverflow.com/questions/3160699/python-progress-bar
-# Modified to print percentages to 2 decimal places, regardless of significant figures.
-def updateProgress(progress):
-    barLength = 60 # Modify this to change the length of the progress bar
-    status = ""
-    if isinstance(progress, int):
-        progress = float(progress)
-    if not isinstance(progress, float):
-        progress = 0
-        status = "error: progress var must be float\r\n"
-    progress = float(round(progress, 4))
-    if progress < 0:
-        progress = 0
-        status = "Halt...\r\n"
-    if progress >= 1:
-        progress = 1
-        status = "Done...\r\n"
-    block = int(round(barLength*progress))
-    progressPercent = '{0: <5}'.format(str(progress*100))
-    text = "\rPercent: [{0}] {1}% {2}".format( "#"*block + "-"*(barLength-block), progress*100, status)
-    sys.stdout.write(text)
-    sys.stdout.flush()
-
 # Four atoms. 
 atoms = ['a','b','c','d']
 # If the identity is atomic it will be represented by 'a'. 
@@ -146,7 +123,6 @@ def generateAlgebrasFromFixedEntries(entriesToFix, converse):
     counter = 1
     nCyclesets = len(possibleCyclesets)
     for cycleset in possibleCyclesets:
-        progress = float(counter) / nCyclesets
         newAlgebra = create4AtomAlgebraFromCycles(cycleset, converse)
         validAlgebra = True
         # We're only interested in nonassociative algebras
@@ -167,9 +143,6 @@ def generateAlgebrasFromFixedEntries(entriesToFix, converse):
                     break
         # If the algebra is valid, add it to the list of algebras.
         if validAlgebra: algebras.append(newAlgebra)
-        # Update the progress bar
-        updateProgress(progress)
-        counter += 1
     return algebras
 
 def gen4Atoms():
@@ -179,21 +152,21 @@ def gen4Atoms():
     algebras = []
     print("Generating 4 atom algebras with two-fragment identity, all atoms self-converse.")
     algebras1 = generateAlgebrasFromFixedEntries(twoFragmentIdentity, converses[0])
-    print("Found " + str(len(algebras1)) + " non-isomorphic algebras.")
+    print("Found " + str(len(algebras1)) + " non-isomorphic algebra" + (len(algebras1) > 1) * "s" + ".")
     print("Generating 4 atom algebras with two-fragment identity, only 2 atoms self-converse.")
     algebras2 = generateAlgebrasFromFixedEntries(twoFragmentIdentity, converses[3])
-    print("Found " + str(len(algebras2)) + " non-isomorphic algebras.")
+    print("Found " + str(len(algebras2)) + " non-isomorphic algebra" + (len(algebras2) > 1) * "s" + ".")
     print("Generating 4 atom algebras with three-fragment identity, all atoms self-converse.")
     algebras3 = generateAlgebrasFromFixedEntries(threeFragmentIdentity, converses[0])
-    print("Found " + str(len(algebras3)) + " non-isomorphic algebras.")
+    print("Found " + str(len(algebras3)) + " non-isomorphic algebra" + (len(algebras3) > 1) * "s" + ".")
     print("Generating 4 atom the algebra with four-fragment identity.")
     algebras4 = generateAlgebrasFromFixedEntries(fourFragmentIdentity, converses[0])
-    print("Found " + str(len(algebras4)) + " non-isomorphic algebras.")
+    print("Found " + str(len(algebras4)) + " non-isomorphic algebra" + (len(algebras4) > 1) * "s" + ".")
     print("Generating 4 atom algebras with atomic identity, all atoms self-converse.")
     algebras5 = generateAlgebrasFromFixedEntries(atomicIdentity, converses[0])
-    print("Found " + str(len(algebras5)) + " non-isomorphic algebras.")
+    print("Found " + str(len(algebras5)) + " non-isomorphic algebra" + (len(algebras5) > 1) * "s" + ".")
     print("Generating 4 atom algebras with atomic identity, only 2 atoms self-converse.")
     algebras6 = generateAlgebrasFromFixedEntries(atomicIdentity, converses[3])
-    print("Found " + str(len(algebras6)) + " non-isomorphic algebras.")
+    print("Found " + str(len(algebras6)) + " non-isomorphic algebra" + (len(algebras6) > 1) * "s" + ".")
     return algebras1 + algebras2 + algebras3 + algebras4 + algebras5 + algebras6
     
