@@ -7,31 +7,17 @@ atoms = ['a','b','c','d']
 # If the identity is atomic it will be represented by 'a'. 
 # This fixes the left-most column and uppermost row of the composition table of atoms.
 # A fixed entry is represented by a consistent triple, eg. ('a','a','a') or ('a','b','b').
-atomicIdentity = [('a', atom, atom) for atom in atoms] + [(atom, 'a', atom) for atom in atoms[1:]]
-# The identity can also be a union of atoms. Here we consider two atoms, assumed 'a' and 'b', unioning to identity.
-twoFragmentIdentity = [(atom, atom, atom) for atom in atoms[:2]] + [(atom1, atom2, 0) for atom1, atom2 in itertools.product(atoms[:2], repeat=2) if atom1 != atom2]
-# Here we consider three atoms, assumed 'a', 'b' and 'c', unioning to identity.
-threeFragmentIdentity = [(atom, atom, atom) for atom in atoms[:3]] + [(atom1, atom2, 0) for atom1, atom2 in itertools.product(atoms[:3], repeat=2) if atom1 != atom2]
-# Here we consider four atoms unioning to identity.
-fourFragmentIdentity = [(atom, atom, atom) for atom in atoms] + [(atom1, atom2, 0) for atom1, atom2 in itertools.product(atoms, repeat=2) if atom1 != atom2]
-# All 10 possible converse structures.
-# We don't actually need all 10. We only need to consider 3 cases: 
-    # All self-converse.
-    # Just 2 self-converse.
-    # No self-converse.
-# All others will be isomorphic 
-converses = [
-        {'a': 'a', 'b': 'b', 'c': 'c', 'd': 'd'}, # all self-converse
-        {'a': 'b', 'b': 'a', 'c': 'c', 'd': 'd'}, # c,d self-converse, (a,b)
-        {'a': 'a', 'b': 'c', 'c': 'b', 'd': 'd'}, # a,d self-converse, (b,c)
-        {'a': 'a', 'b': 'b', 'c': 'd', 'd': 'c'}, # a,b self-converse, (c,d)
-        {'a': 'c', 'b': 'b', 'c': 'a', 'd': 'd'}, # b,d self-converse, (a,c)
-        {'a': 'a', 'b': 'd', 'c': 'c', 'd': 'b'}, # a,c self-converse, (b,d)
-        {'a': 'd', 'b': 'b', 'c': 'c', 'd': 'a'}, # b,c self-converse, (a,d)
-        {'a': 'b', 'b': 'a', 'c': 'd', 'd': 'c'}, # (a,b), (c,d)
-        {'a': 'd', 'b': 'c', 'c': 'b', 'd': 'a'}, # (a,d), (b,c)
-        {'a': 'c', 'b': 'd', 'c': 'a', 'd': 'b'}  # (a,c), (b,d)
-        ]
+def atomicIdentity(nAtoms):
+    atoms = [chr(i + 97) for i in range(nAtoms)]
+    return [('a', atom, atom) for atom in atoms] + [(atom, 'a', atom) for atom in atoms[1:]]
+
+# Suppose that the identity element consists of nAtoms, with nAtoms > 1.
+# This construction assumes that the identity fragments form the first nFragments
+# atoms, ie. a three-fragment identity will be the union of a, b and c.
+def fragmentIdentity(nAtoms, nFragments):
+    atoms = [chr(i + 97) for i in range(nAtoms)]
+    return([(atom, atom, atom) for atom in atoms[:nFragments]] + 
+        [(atom1, atom2, 0) for atom1, atom2 in itertools.product(atoms[:nFragments], repeat=2) if atom1 != atom2])
 
 # Given a triple and a converse structure, generate the cycle including that triple.
 # This is an implementation of the relation algebra concept of a Peircean transform.
@@ -53,7 +39,8 @@ def genCycle(triple, converse):
     return list(set(cycle))
 
 # Given a converse structure, partition the triples of elements into cycles.
-def genCyclePartition(converse):
+def genCyclePartition(converse, nAtoms):
+    atoms = [chr(i + 97) for i in range(nAtoms)]
     parts = []
     for triple in itertools.product(atoms, repeat = 3):
         cycle = genCycle(triple, converse)
@@ -91,9 +78,9 @@ def fixEntries(entriesToFix, cycles):
 
 # Create an algebra from a list of cycles to be included, and a converse structure.
 # First creates an atom table from the cycles, then creates an instance of the AtomicAlgebra class
-def create4AtomAlgebraFromCycles(cycles, converse):
+def createnAtomAlgebraFromCycles(cycles, converse, nAtoms):
     # Create an empty atomTable
-    atomTable = [[set() for i in range(4)] for j in range(4)]
+    atomTable = [[set() for i in range(nAtoms)] for j in range(nAtoms)]
     # Fill the atom table.
     for cycle in cycles:
         for triple in cycle:
@@ -107,9 +94,11 @@ def create4AtomAlgebraFromCycles(cycles, converse):
 
 # Generate a list of nonassociative algebras with an atomTable with desired fixed entries and converse structure.
 # Returned list contains no two isomorphic algebras.
-def generateAlgebrasFromFixedEntries(entriesToFix, converse):
+# We can also specify that the identity size should be fixed, so that the number
+# of atoms in the identity of the first algebra (the simples)
+def generateAlgebrasFromFixedEntries(entriesToFix, converse, nAtoms, fixIdentitySize = False):
     # First generate all of the cycles from the desired converse structure.
-    cycles = genCyclePartition(converse)
+    cycles = genCyclePartition(converse, nAtoms)
     # Then generate the necessary, forbidden and optional cycles fixing the desired entries.
     necessaryCycles, forbiddenCycles, optionalCycles = fixEntries(entriesToFix, cycles)
     # Take the powerset of optional cycles. This is the set of choices of optional cycles to include.
@@ -119,31 +108,43 @@ def generateAlgebrasFromFixedEntries(entriesToFix, converse):
     # Add the necessary cycles to every choice of optional cycles. Each possible cycle set is an algebra.
     possibleCyclesets = [necessaryCycles + choice for choice in pset]
     algebras = []
-    # The counter is used to track progress and display a progress bar.
-    counter = 1
     nCyclesets = len(possibleCyclesets)
     for cycleset in possibleCyclesets:
-        newAlgebra = create4AtomAlgebraFromCycles(cycleset, converse)
-        validAlgebra = True
+        newAlgebra = createnAtomAlgebraFromCycles(cycleset, converse, nAtoms)
         # We're only interested in nonassociative algebras
-        if not newAlgebra.isNA(): 
-            validAlgebra = False
-        # Strictly speaking, we don't need to separate the cases in which 
-        # the identity is two, three, or four fragments.
-        elif entriesToFix == twoFragmentIdentity and len(newAlgebra.identity) > 2:
-            validAlgebra = False
-        elif entriesToFix == threeFragmentIdentity and len(newAlgebra.identity) > 3:
-            validAlgebra = False
-        else:
-            # Check to see if the new algebra is isomorphic to an algebra we have already constructed.
+        validAlgebra = newAlgebra.isNA()
+        if validAlgebra: # check for isomorphisms
             for algebra in algebras:
-                if newAlgebra.isIsomorphic(algebra, returnIsomorphisms = False, creating4AtomAlgebras = True):
+                if newAlgebra.isIsomorphic(algebra, returnIsomorphism = False):
                     validAlgebra = False
                     # If an isomorphic algebra is found, we don't need to check the rest.
                     break
-        # If the algebra is valid, add it to the list of algebras.
+        if fixIdentitySize and validAlgebra: # If we want to fix the size of the identity
+            if len(algebras) == 0:
+                fixedIdentitySize = len(newAlgebra.identity)
+            else:
+                validAlgebra = (len(newAlgebra.identity) == fixedIdentitySize)
         if validAlgebra: algebras.append(newAlgebra)
     return algebras
+
+# All 10 possible converse structures.
+# We don't actually need all 10. We only need to consider 3 cases: 
+    # All self-converse.
+    # Just 2 self-converse.
+    # No self-converse.
+# All others will be isomorphic 
+conversesOn4Atoms = [
+        {'a': 'a', 'b': 'b', 'c': 'c', 'd': 'd'}, # all self-converse
+        {'a': 'b', 'b': 'a', 'c': 'c', 'd': 'd'}, # c,d self-converse, (a,b)
+        {'a': 'a', 'b': 'c', 'c': 'b', 'd': 'd'}, # a,d self-converse, (b,c)
+        {'a': 'a', 'b': 'b', 'c': 'd', 'd': 'c'}, # a,b self-converse, (c,d)
+        {'a': 'c', 'b': 'b', 'c': 'a', 'd': 'd'}, # b,d self-converse, (a,c)
+        {'a': 'a', 'b': 'd', 'c': 'c', 'd': 'b'}, # a,c self-converse, (b,d)
+        {'a': 'd', 'b': 'b', 'c': 'c', 'd': 'a'}, # b,c self-converse, (a,d)
+        {'a': 'b', 'b': 'a', 'c': 'd', 'd': 'c'}, # (a,b), (c,d)
+        {'a': 'd', 'b': 'c', 'c': 'b', 'd': 'a'}, # (a,d), (b,c)
+        {'a': 'c', 'b': 'd', 'c': 'a', 'd': 'b'}  # (a,c), (b,d)
+        ]
 
 def gen4Atoms():
     # Generate all algebras and report on progress along the way.
@@ -151,22 +152,32 @@ def gen4Atoms():
     # This reduces the number of isomorphism checks needed.
     algebras = []
     print("Generating 4 atom algebras with two-fragment identity, all atoms self-converse.")
-    algebras1 = generateAlgebrasFromFixedEntries(twoFragmentIdentity, converses[0])
+    algebras1 = generateAlgebrasFromFixedEntries(fragmentIdentity(4, 2), conversesOn4Atoms[0], nAtoms = 4, fixIdentitySize = True)
     print("Found " + str(len(algebras1)) + " non-isomorphic algebra" + (len(algebras1) > 1) * "s" + ".")
     print("Generating 4 atom algebras with two-fragment identity, only 2 atoms self-converse.")
-    algebras2 = generateAlgebrasFromFixedEntries(twoFragmentIdentity, converses[3])
+    algebras2 = generateAlgebrasFromFixedEntries(fragmentIdentity(4, 2), conversesOn4Atoms[3], nAtoms = 4, fixIdentitySize = True)
     print("Found " + str(len(algebras2)) + " non-isomorphic algebra" + (len(algebras2) > 1) * "s" + ".")
     print("Generating 4 atom algebras with three-fragment identity, all atoms self-converse.")
-    algebras3 = generateAlgebrasFromFixedEntries(threeFragmentIdentity, converses[0])
+    algebras3 = generateAlgebrasFromFixedEntries(fragmentIdentity(4, 3), conversesOn4Atoms[0], nAtoms = 4, fixIdentitySize = True)
     print("Found " + str(len(algebras3)) + " non-isomorphic algebra" + (len(algebras3) > 1) * "s" + ".")
     print("Generating 4 atom the algebra with four-fragment identity.")
-    algebras4 = generateAlgebrasFromFixedEntries(fourFragmentIdentity, converses[0])
+    algebras4 = generateAlgebrasFromFixedEntries(fragmentIdentity(4, 4), conversesOn4Atoms[0], nAtoms = 4, fixIdentitySize = True)
     print("Found " + str(len(algebras4)) + " non-isomorphic algebra" + (len(algebras4) > 1) * "s" + ".")
     print("Generating 4 atom algebras with atomic identity, all atoms self-converse.")
-    algebras5 = generateAlgebrasFromFixedEntries(atomicIdentity, converses[0])
+    algebras5 = generateAlgebrasFromFixedEntries(atomicIdentity(4), conversesOn4Atoms[0], nAtoms = 4, fixIdentitySize = True)
     print("Found " + str(len(algebras5)) + " non-isomorphic algebra" + (len(algebras5) > 1) * "s" + ".")
     print("Generating 4 atom algebras with atomic identity, only 2 atoms self-converse.")
-    algebras6 = generateAlgebrasFromFixedEntries(atomicIdentity, converses[3])
+    algebras6 = generateAlgebrasFromFixedEntries(atomicIdentity(4), conversesOn4Atoms[3], nAtoms = 4, fixIdentitySize = True)
     print("Found " + str(len(algebras6)) + " non-isomorphic algebra" + (len(algebras6) > 1) * "s" + ".")
     return algebras1 + algebras2 + algebras3 + algebras4 + algebras5 + algebras6
     
+conversesOn5Atoms = [
+        {'a': 'a', 'b': 'b', 'c': 'c', 'd': 'd', 'e': 'e'}, # all self-converse
+        {'a': 'a', 'b': 'b', 'c': 'c', 'd': 'e', 'e': 'd'}, # 3 self-converse, (d, e)
+        {'a': 'a', 'b': 'c', 'c': 'b', 'd': 'e', 'e': 'd'}  # 1 self-converse, (b, c), (d, e)
+        ]
+
+#algebras = generateAlgebrasFromFixedEntries(atomicIdentity(5), conversesOn5Atoms[0], 5)
+#algebras = generateAlgebrasFromFixedEntries(atomicIdentity(5), conversesOn5Atoms[1], 5)
+
+        

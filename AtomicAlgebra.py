@@ -60,10 +60,6 @@ class AtomicAlgebra:
         self._isSA = None
         self._isAssociative = None
         self._isRA = None
-        self._consistentAtomTriples = None
-        self._consistentMirrorFreeAtomTriples = None
-        self._isRepresentable = None
-        self._representation = None
 
     # A human-readable description of each relation algebra axiom.
     AXIOMS = {
@@ -82,11 +78,11 @@ class AtomicAlgebra:
     }           
 
     # Given an atom table as a string, convert it to a matrix (list of lists).
-    # Fuck me, change this.
-    # Also strip spaces in the input string
+    # This method seems to be powered by magic, and should be redone.
     @staticmethod
     def _stringToAtomTable(matrixString):
-        M1 = matrixString.strip()[1:-1]
+        M0 = matrixString.replace(" ", "")
+        M1 = M0.strip()[1:-1]
         M2 = M1.strip()[1:-1]
         M3 = [line.split(',') for line in M2.split('],[')]
         M4 = [[set(entry.split("+"))-set(['0']) for entry in line] for line in M3]
@@ -123,12 +119,13 @@ class AtomicAlgebra:
     # If creating4AtomAlgebras, we're assuming that our algebras are coming from the gen4Atoms function.
     # If so, we can assume some additional structure about the converses.
     # This isn't necessary, but it does speed up the isomorphism checking.
-    # Can also return a list of isomorphisms, but this takes a long time.
-    def isIsomorphic(self, algebra2, returnIsomorphisms = False, creating4AtomAlgebras = False):
-        # First we check that the algebras are the same size.
-        # This is a necessary condition for isomorphism, so can save some time.
-        if self.nAtoms != algebra2.nAtoms:
-            return False
+    # Can also return a list an isomorphism, if one exists.
+    def isIsomorphic(self, algebra2, returnIsomorphism = False):
+        # First we check that the algebras are the same size, and that the
+        # number of atoms in the identity is the same.
+        # These are necessary conditions for an isomorphism, so can save some time.
+        if self.nAtoms != algebra2.nAtoms: return False
+        if len(self.identity) != len(algebra2.identity): return False
         # Next we check that the converse pairs match in number and structure.
         # This is a necessary condition for isomorphism, so can save some time.
         converses1 = self.conversePairs
@@ -141,71 +138,52 @@ class AtomicAlgebra:
         nonSelfConversePairs2 = [x for x in converses2 if x[0] != x[1]]
         if len(selfConverses1) != len(selfConverses2):
             return False
-        # Enumerate all possible functions respecting converse
-        # First we check if we are creating4AtomAlgebras, so we might make 
-        # additional assumptions. These assumptions speed up the isomorphism
-        # checking significantly. In particular, we can assume the 'a' is an 
-        # identity element, and that either all atoms are symmetric or that the
-        # only converse pair is ('c','d').
-        # Note the small number of possible converse structures.
-        if creating4AtomAlgebras and self.identity == set(['a']) and algebra2.identity == set(['a']):
-            if len(selfConverses1) == 4:
-                possibleIsomorphisms = [
-                    {'a': 'a', 'b': 'c', 'c': 'b', 'd': 'd'},
-                    {'a': 'a', 'b': 'b', 'c': 'd', 'd': 'c'},
-                    {'a': 'a', 'b': 'd', 'c': 'c', 'd': 'b'},
-                    {'a': 'a', 'b': 'c', 'c': 'd', 'd': 'b'},
-                    {'a': 'a', 'b': 'd', 'c': 'b', 'd': 'c'}
-                    ]
-            elif len(selfConverses1) == 2:
-                possibleIsomorphisms = [
-                    {'a': 'a', 'b': 'b', 'c': 'c', 'd': 'd'},
-                    {'a': 'a', 'b': 'b', 'c': 'd', 'd': 'c'},
-                    ]
-            else:
-                raise ValueError("Unexpected converse structure. Assumes either all atoms are symmetric, or only converse pair is ('c','d').")
-        # If we are not creating4AtomAlgebras, then we must check for 
-        # isomorphisms by brute force.
-        else:
-            # First enumerate all possible ways to map symmetric atoms from 
-            # the first algebra to self converse atoms from the second algebra.
-            possibleSelfConverseMaps = []
-            for perm in permutations(selfConverses2):
-                possibleSelfConverseMaps.append(zip(selfConverses1, perm))
-            possibleSelfConverseMaps = [list(p) for p in possibleSelfConverseMaps]
-            #return(possibleSelfConverseMaps)
-            # Now enumerate all possible ways to map converse pairs from the 
-            # first algebra to converse pairs from the second algebra.
-            possibleConversePairMaps = []
-            for perm1 in list(product(*[[x,x[::-1]] for x in nonSelfConversePairs2])):
-                for perm2 in permutations(perm1):
-                    map = []
-                    pairing = zip(nonSelfConversePairs1, perm2)
-                    for pair in pairing:
-                        map.append((pair[0][0], pair[1][0]))
-                        map.append((pair[0][1], pair[1][1]))
-                    possibleConversePairMaps.append(map)
-            # Now combine them to generate all maps respecting the converse structure.
-            possibleIsomorphisms = []
-            for selfConverseMap, conversePairMap in itertools.product(possibleSelfConverseMaps, possibleConversePairMaps):
-                possibleIsomorphisms.append(selfConverseMap + conversePairMap)
-            possibleIsomorphisms = [dict(x) for x in possibleIsomorphisms]
-        # Assume that the algebras are not isomorphic.
+        # Enumerate all possible functions respecting converse.
+        # First enumerate all possible ways to map symmetric atoms from 
+        # the first algebra to self converse atoms from the second algebra.
+        possibleSelfConverseMaps = []
+        for perm in permutations(selfConverses2):
+            possibleSelfConverseMaps.append(zip(selfConverses1, perm))
+        possibleSelfConverseMaps = [list(p) for p in possibleSelfConverseMaps]
+        # Now enumerate all possible ways to map converse pairs from the 
+        # first algebra to converse pairs from the second algebra.
+        possibleConversePairMaps = []
+        for perm1 in list(product(*[[x,x[::-1]] for x in nonSelfConversePairs2])):
+            for perm2 in permutations(perm1):
+                map = []
+                pairing = zip(nonSelfConversePairs1, perm2)
+                for pair in pairing:
+                    map.append((pair[0][0], pair[1][0]))
+                    map.append((pair[0][1], pair[1][1]))
+                possibleConversePairMaps.append(map)
+        # Now combine them to generate all maps respecting the converse structure.
+        possibleIsomorphisms = []
+        for selfConverseMap, conversePairMap in itertools.product(possibleSelfConverseMaps, possibleConversePairMaps):
+            possibleIsomorphisms.append(selfConverseMap + conversePairMap)
+        possibleIsomorphisms = [dict(x) for x in possibleIsomorphisms]
+        # We can reduce the search space by exploiting the fact that an
+        # isomorphism will always map the identity of one algebra to the identity
+        # of the target algebra. We generate all possible maps from atoms in the
+        # identity of the first algebra to atoms in the identity of the second
+        # algebra, and then restrict the possibleIsomorphisms to those that
+        # "agree" with one of the identity-preserving maps.
+        algebra2IdentityPermutations = [p for p in permutations(list(algebra2.identity))]
+        possibleIdentityMaps = [dict((list(self.identity)[i], y[i]) 
+            for i in range(len(self.identity))) for y in algebra2IdentityPermutations]
+        possibleIsomorphisms = [iso for iso in possibleIsomorphisms
+            if {k: iso[k] for k in list(self.identity)} in possibleIdentityMaps]
+        # Now we search through the possible isomorphisms.
+        # Our final search space includes only those that respect converse and
+        # identity. We now need to search through these for maps that respect
+        # composition. Break if an isomorphism is found, to save time.
         areIsomorphic = False
-        isomorphisms = []
-        # Go through all the maps that preserve converse structure to test if
-        # they also preserve composition. If so, they are isomorphic.
-        # If we want to enumerate all isomorphisms, check all maps.
-        # Otherwise, break if an isomorphism is found, to save time.
         for possibleIsomorphism in possibleIsomorphisms:
             if self.preservesComposition(algebra2, possibleIsomorphism):
                 areIsomorphic = True
-                if not returnIsomorphisms:
-                    break
-                else:
-                    isomorphisms.append(possibleIsomorphism)
-        if areIsomorphic and returnIsomorphisms:
-            return areIsomorphic, isomorphisms
+                isomorphism = possibleIsomorphism
+                break
+        if areIsomorphic and returnIsomorphism:
+            return areIsomorphic, isomorphism
         else:
             return areIsomorphic
 
