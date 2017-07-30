@@ -34,8 +34,8 @@ class AtomicAlgebra:
         self._nonIdentityAtoms = None
         self.top = reduce(lambda x, y : x |y, self.atoms)
         self.zero = set()
-        # need to define elements as power set of atoms
-        # Combinations seems to be Sage only. Need to get a power set somehow.
+        # The elements are the power set of the atoms.
+        # It's convenient 
         self.elements = [combinations(list(self.top), n) for n in range(self.nAtoms+1)]
         self.elements = list(chain.from_iterable(self.elements))
         self.elements = [set(element) for element in self.elements]
@@ -50,6 +50,8 @@ class AtomicAlgebra:
             else: # non-symmetric atoms
                 self.atomConverses[conversePair[0]] = conversePair[1]
                 self.atomConverses[conversePair[1]] = conversePair[0]
+        self.symmetricAtoms = [x[0] for x in self.conversePairs if x[0] == x[1]]
+        self.nonSymmetricPairs = [x for x in self.conversePairs if x[0] != x[1]]
         self._identity = None
         self._semigroup = None
         # properties
@@ -89,15 +91,17 @@ class AtomicAlgebra:
         return M4  
 
     # Give a human readable report on a list of failed axioms, eg. ["R01", "R02", "R07"].
-    # This only works on a list of axioms. How do we get it to work for
-    # singletons too?
     @staticmethod
     def reportFailedAxioms(failedAxioms):
         if type(failedAxioms) is not list: failedAxioms = [failedAxioms]
         for axiom in failedAxioms:
             print("Fails axiom " + axiom + ": " + AtomicAlgebra.AXIOMS[axiom] + ".")
             
-     # Given a map between atoms as a dictionary, returns a map that works on unions of atoms.
+    # Through unions, we can extend any map between atoms to a map between
+    # elements of algebras. For example, if 'a' -> 'b' and 'c' -> 'd', then  
+    # {'a', 'b'} -> {'c', 'd'}. Thus, every map between atoms uniquely defines 
+    # a map between elements. In practice we always define maps on atoms only.
+    # We use the term "function" in reference to a map between elements.
     @staticmethod
     def atomFunction(atomMap, element):
         if type(element) is str:
@@ -106,7 +110,8 @@ class AtomicAlgebra:
             return set([AtomicAlgebra.atomFunction(atomMap, x) for x in element])
         
     # Check if a map between atom structures preserves composition.
-    # This is required for the function to be an isomorphism.
+    # This is a necessary, but not sufficient condition, for an atomMap or
+    # atomFunction to be an isomorphism.
     def preservesComposition(self, algebra2, atomMap):
         preservesComposition = True
         for x, y in itertools.product(self.atoms, repeat = 2):
@@ -115,11 +120,8 @@ class AtomicAlgebra:
                 break
         return preservesComposition
 
-    # Checks if a given algebra is isomorphic to self.
-    # If creating4AtomAlgebras, we're assuming that our algebras are coming from the gen4Atoms function.
-    # If so, we can assume some additional structure about the converses.
-    # This isn't necessary, but it does speed up the isomorphism checking.
-    # Can also return a list an isomorphism, if one exists.
+    # Checks if a given algebra is isomorphic to the instance being called from.
+    # Can also return an isomorphism, if one exists.
     def isIsomorphic(self, algebra2, returnIsomorphism = False):
         # First we check that the algebras are the same size, and that the
         # number of atoms in the identity is the same.
@@ -128,30 +130,22 @@ class AtomicAlgebra:
         if len(self.identity) != len(algebra2.identity): return False
         # Next we check that the converse pairs match in number and structure.
         # This is a necessary condition for isomorphism, so can save some time.
-        converses1 = self.conversePairs
-        nonSelfConversePairs1 = len(converses1)
-        selfConverses1 = [x[0] for x in converses1 if x[0] == x[1]]
-        nonSelfConversePairs1 = [x for x in converses1 if x[0] != x[1]]
-        converses2 = algebra2.conversePairs
-        nonSelfConversePairs2 = len(converses2)
-        selfConverses2 = [x[0] for x in converses2 if x[0] == x[1]]
-        nonSelfConversePairs2 = [x for x in converses2 if x[0] != x[1]]
-        if len(selfConverses1) != len(selfConverses2):
+        if len(self.symmetricAtoms) != len(algebra2.symmetricAtoms):
             return False
         # Enumerate all possible functions respecting converse.
         # First enumerate all possible ways to map symmetric atoms from 
         # the first algebra to self converse atoms from the second algebra.
         possibleSelfConverseMaps = []
-        for perm in permutations(selfConverses2):
-            possibleSelfConverseMaps.append(zip(selfConverses1, perm))
+        for perm in permutations(algebra2.symmetricAtoms):
+            possibleSelfConverseMaps.append(zip(self.symmetricAtoms, perm))
         possibleSelfConverseMaps = [list(p) for p in possibleSelfConverseMaps]
         # Now enumerate all possible ways to map converse pairs from the 
         # first algebra to converse pairs from the second algebra.
         possibleConversePairMaps = []
-        for perm1 in list(product(*[[x,x[::-1]] for x in nonSelfConversePairs2])):
+        for perm1 in list(product(*[[x,x[::-1]] for x in algebra2.nonSymmetricPairs])):
             for perm2 in permutations(perm1):
                 map = []
-                pairing = zip(nonSelfConversePairs1, perm2)
+                pairing = zip(self.nonSymmetricPairs, perm2)
                 for pair in pairing:
                     map.append((pair[0][0], pair[1][0]))
                     map.append((pair[0][1], pair[1][1]))
