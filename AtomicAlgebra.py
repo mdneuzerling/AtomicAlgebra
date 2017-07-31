@@ -13,23 +13,23 @@ class AtomicAlgebra:
     # If 'a' is symmetric, write as ('a', 'a').
     # Can also give converses as a dictionary.
     # Algebra may not necessarily meet all the axioms.
-    def __init__(self, atomTable, conversePairs = None):
+    def __init__(self, atomTable, converse = None):
         if type(atomTable) == str:
             atomTable = self._stringToAtomTable(atomTable)
         self.nAtoms = len(atomTable[0])
         self.atoms = [set([chr(i + 97)]) for i in range(self.nAtoms)]
         self.atomTable = atomTable
         # If no converses given assume all atoms are symmetric.
-        if conversePairs == None: 
-            self.conversePairs = [(x,x) for x in [chr(i + 97) for i in range(self.nAtoms)]]
-        # Can also give converses as a dictionary.
-        elif type(conversePairs) == dict:
-            self.conversePairs = []
-            for pair in conversePairs.items():
-                if pair not in self.conversePairs and pair[::-1] not in self.conversePairs:
-                    self.conversePairs.append(pair)
+        if converse == None: 
+            self.converse = [(x,x) for x in [chr(i + 97) for i in range(self.nAtoms)]]
+        # Can give atoms as a dictionary on atoms...
+        if type(converse) is dict:
+            self.conversePairs = self.converseDictToPairs(converse)
+            self.atomConverses = converse
+        # ... or as a list of tuples.
         else:
             self.conversePairs = conversePairs
+            self.atomConverses = self.conversePairsToDict(converse)
         # set up the basic properties of the algebra.
         self._nonIdentityAtoms = None
         self.top = reduce(lambda x, y : x |y, self.atoms)
@@ -40,15 +40,6 @@ class AtomicAlgebra:
         self.elements = [set(element) for element in self.elements]
         self.nElements = 2**self.nAtoms 
         self.nNonZeroElements = self.nElements - 1
-        # We may want to call on a converse from a dictionary.
-        # So here we construct a dictionary of converses from the converse pairs.
-        self.atomConverses = dict()
-        for conversePair in self.conversePairs:
-            if conversePair[0] == conversePair[1]: # symmetric atom
-                self.atomConverses[conversePair[0]] = conversePair[0]
-            else: # non-symmetric atoms
-                self.atomConverses[conversePair[0]] = conversePair[1]
-                self.atomConverses[conversePair[1]] = conversePair[0]
         self.symmetricAtoms = [x[0] for x in self.conversePairs if x[0] == x[1]]
         self.nonSymmetricPairs = [x for x in self.conversePairs if x[0] != x[1]]
         self._identity = None
@@ -90,8 +81,8 @@ class AtomicAlgebra:
         return M4  
 
     # Converses can be given as a list of tuples [('a', 'a'), ('b', 'c')] or a
-    # dictionary {'a': 'a', 'b': 'c', 'c': 'b'}. This function turns tuples into
-    # a dictionary.
+    # dictionary on atoms {'a': 'a', 'b': 'c', 'c': 'b'}. Tne following 
+    # methods convert between the two.
     @staticmethod
     def conversePairsToDict(conversePairs):
         converseDict = dict()
@@ -102,6 +93,14 @@ class AtomicAlgebra:
                 converseDict[conversePair[0]] = conversePair[1]
                 converseDict[conversePair[1]] = conversePair[0]
         return converseDict
+
+    @staticmethod
+    def converseDictToPairs(converseDict):
+        conversePairs = []
+        for pair in converseDict.items():
+            if pair not in conversePairs and pair[::-1] not in conversePairs:
+                conversePairs.append(pair)
+        return conversePairs
 
     # Give a human readable report on a list of failed axioms, eg. ["R01", "R02", "R07"].
     @staticmethod
@@ -124,7 +123,7 @@ class AtomicAlgebra:
 
     # Turns a single atom 'a' into a set(['a']).
     @staticmethod
-    def makeset(x):
+    def makeSet(x):
         if type(x) == str:
             x = set([x])
         if type(x) != type(set()):
@@ -208,8 +207,8 @@ class AtomicAlgebra:
     # We allow for inputs of single atoms, but every element is properly
     # viewed as a set of atoms.
     def compose(self, x, y):
-        x = self.makeset(x)
-        y = self.makeset(y)
+        x = self.makeSet(x)
+        y = self.makeSet(y)
         # Composition with the 0 element
         if x == set() or y == set():
             output = set()
@@ -226,24 +225,24 @@ class AtomicAlgebra:
 
     # Define intersection as set intersection.
     def intersection(self, x, y):
-        x = self.makeset(x)
-        y = self.makeset(y)
+        x = self.makeSet(x)
+        y = self.makeSet(y)
         return x.intersection(y)
 
     # Define union as set union.
     def union(self, x, y):
-        x = self.makeset(x)
-        y = self.makeset(y)
+        x = self.makeSet(x)
+        y = self.makeSet(y)
         return x.union(y)
 
     # Define converse using the converse dictionary we made earlier.
     def converse(self, x):
-        x = self.makeset(x)
+        x = self.makeSet(x)
         return set([self.atomConverses[atom] for atom in x])
 
     # Define complement as set complement relative to the top elemenet (set of all atoms).
     def complement(self, x):
-        x = self.makeset(x)
+        x = self.makeSet(x)
         return self.top.difference(x)
 
     # Return the identity of an algebra if it exists, otherwise returns None
