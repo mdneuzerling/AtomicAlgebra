@@ -28,7 +28,7 @@ class AtomicAlgebra:
             self.atomConverses = converse
         # ... or as a list of tuples.
         else:
-            self.conversePairs = conversePairs
+            self.conversePairs = converse
             self.atomConverses = self.conversePairsToDict(converse)
         # set up the basic properties of the algebra.
         self._nonIdentityAtoms = None
@@ -135,7 +135,7 @@ class AtomicAlgebra:
     # atomFunction to be an isomorphism.
     def preservesComposition(self, algebra2, atomMap):
         preservesComposition = True
-        for x, y in itertools.product(self.atoms, repeat = 2):
+        for x, y in product(self.atoms, repeat = 2):
             if AtomicAlgebra.atomFunction(atomMap, self.compose(x, y)) != algebra2.compose(AtomicAlgebra.atomFunction(atomMap, x), AtomicAlgebra.atomFunction(atomMap, y)):
                 preservesComposition = False
                 break
@@ -173,7 +173,7 @@ class AtomicAlgebra:
                 possibleConversePairMaps.append(map)
         # Now combine them to generate all maps respecting the converse structure.
         possibleIsomorphisms = []
-        for selfConverseMap, conversePairMap in itertools.product(possibleSelfConverseMaps, possibleConversePairMaps):
+        for selfConverseMap, conversePairMap in product(possibleSelfConverseMaps, possibleConversePairMaps):
             possibleIsomorphisms.append(selfConverseMap + conversePairMap)
         possibleIsomorphisms = [dict(x) for x in possibleIsomorphisms]
         # We can reduce the search space by exploiting the fact that an
@@ -214,7 +214,7 @@ class AtomicAlgebra:
             output = set()
         else:
             output = set()
-            for i, j in itertools.product(x, y):
+            for i, j in product(x, y):
                 rowPos = ord(i) - 97
                 colPos = ord(j) - 97
                 try:
@@ -285,7 +285,7 @@ class AtomicAlgebra:
             # Axiom R01: +-commutativity: x + y = y + x
             # Axiom R02: +-associativity: x + (y + z) = (x + y) + z
             # Axiom R03: Huntington's axiom: -(-x + -y) + -(-x + y) = x
-            for x,y in itertools.product(self.atoms, repeat = 2):
+            for x,y in product(self.atoms, repeat = 2):
                 firstTerm = self.complement(self.union(self.complement(x), self.complement(y)))
                 secondTerm = self.complement(self.union(self.complement(x), y))
                 if self.union(firstTerm, secondTerm) != x:
@@ -302,17 +302,17 @@ class AtomicAlgebra:
                     failedAxioms.append("R07")
                     break
             # Axiom R08: converse-distributivity: con(x + y) = con(x) + con(y)
-            for x,y in itertools.product(self.atoms, repeat = 2):
+            for x,y in product(self.atoms, repeat = 2):
                 if self.converse(self.union(x,y)) != self.union(self.converse(x), self.converse(y)):
                     failedAxioms.append("R09")
                     break
             # Axiom R09: converse-involutive distributivity: con(x;y) = con(y);con(x)
-            for x,y in itertools.product(self.atoms, repeat = 2):
+            for x,y in product(self.atoms, repeat = 2):
                 if self.converse(self.compose(x,y)) != self.compose(self.converse(y), self.converse(x)):
                     failedAxioms.append("R09")
                     break
             # Axiom R10: Tarski/De Morgan axiom: con(x); -(x;y) + -y = y
-            for x,y in itertools.product(self.atoms, repeat = 2):
+            for x,y in product(self.atoms, repeat = 2):
                 if self.union(self.compose(self.converse(x), self.complement(self.compose(x,y))), self.complement(y)) != self.complement(y):
                     failedAxioms.append("R10")
                     break
@@ -409,7 +409,7 @@ class AtomicAlgebra:
     def isAssociative(self):
         if self._isAssociative == None:
             self._isAssociative = True
-            for i, j, k in itertools.product(self.elements, repeat = 3):
+            for i, j, k in product(self.elements, repeat = 3):
                 if self.compose(self.compose(i,j), k) != self.compose(i, self.compose(j,k)):
                     self._isAssociative = False
                     break

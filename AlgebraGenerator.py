@@ -1,6 +1,4 @@
-import itertools
-import time, sys
-from datetime import datetime
+from itertools import product
 
 # Four atoms. 
 atoms = ['a','b','c','d']
@@ -20,7 +18,7 @@ def fragmentIdentity(nAtoms, nFragments):
     else:
         atoms = [chr(i + 97) for i in range(nAtoms)]
         return([(atom, atom, atom) for atom in atoms[:nFragments]] + 
-            [(atom1, atom2, 0) for atom1, atom2 in itertools.product(atoms[:nFragments], repeat=2) if atom1 != atom2])
+            [(atom1, atom2, 0) for atom1, atom2 in product(atoms[:nFragments], repeat=2) if atom1 != atom2])
 
 # Given a triple and a converse structure, generate the cycle including that triple.
 # This is an implementation of the relation algebra concept of a Peircean transform.
@@ -45,7 +43,7 @@ def genCycle(triple, converse):
 def genCyclePartition(converse, nAtoms):
     atoms = [chr(i + 97) for i in range(nAtoms)]
     parts = []
-    for triple in itertools.product(atoms, repeat = 3):
+    for triple in product(atoms, repeat = 3):
         cycle = genCycle(triple, converse)
         if cycle not in parts: parts.append(cycle)
     return parts
