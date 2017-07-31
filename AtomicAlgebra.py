@@ -35,7 +35,6 @@ class AtomicAlgebra:
         self.top = reduce(lambda x, y : x |y, self.atoms)
         self.zero = set()
         # The elements are the power set of the atoms.
-        # It's convenient 
         self.elements = [combinations(list(self.top), n) for n in range(self.nAtoms+1)]
         self.elements = list(chain.from_iterable(self.elements))
         self.elements = [set(element) for element in self.elements]
@@ -108,7 +107,16 @@ class AtomicAlgebra:
             return atomMap[element]
         else:
             return set([AtomicAlgebra.atomFunction(atomMap, x) for x in element])
-        
+
+    # Turns a single atom 'a' into a set(['a']).
+    @staticmethod
+    def makeset(x):
+        if type(x) == str:
+            x = set([x])
+        if type(x) != type(set()):
+            raise TypeError('An element of the algebra needs to be either a set of atoms or a string representing a single atom.')
+        return x
+
     # Check if a map between atom structures preserves composition.
     # This is a necessary, but not sufficient condition, for an atomMap or
     # atomFunction to be an isomorphism.
@@ -163,7 +171,8 @@ class AtomicAlgebra:
         # "agree" with one of the identity-preserving maps.
         algebra2IdentityPermutations = [p for p in permutations(list(algebra2.identity))]
         possibleIdentityMaps = [dict((list(self.identity)[i], y[i]) 
-            for i in range(len(self.identity))) for y in algebra2IdentityPermutations]
+            for i in range(len(self.identity))) 
+            for y in algebra2IdentityPermutations]
         possibleIsomorphisms = [iso for iso in possibleIsomorphisms
             if {k: iso[k] for k in list(self.identity)} in possibleIdentityMaps]
         # Now we search through the possible isomorphisms.
@@ -180,14 +189,6 @@ class AtomicAlgebra:
             return areIsomorphic, isomorphism
         else:
             return areIsomorphic
-
-    # Turns a single atom 'a' into a set(['a']).
-    def makeset(self, x):
-        if type(x) == str:
-            x = set([x])
-        if type(x) != type(set()):
-            raise TypeError('An element of the algebra needs to be either a set of atoms or a string representing a single atom.')
-        return x
     
     # Define composition of atoms or sets of atoms using the atom table.
     # We allow for inputs of single atoms, but every element is properly
@@ -232,7 +233,8 @@ class AtomicAlgebra:
         return self.top.difference(x)
 
     # Return the identity of an algebra if it exists, otherwise returns None
-    # If the identity element is not already recorded, will run through all elements and check for identity property.
+    # If the identity element is not already recorded, will run through all 
+    # elements and check for identity property.
     @property
     def identity(self):
         if self._identity == None:
