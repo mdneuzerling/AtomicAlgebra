@@ -89,6 +89,20 @@ class AtomicAlgebra:
         M4 = [[set(entry.split("+"))-set(['0']) for entry in line] for line in M3]
         return M4  
 
+    # Converses can be given as a list of tuples [('a', 'a'), ('b', 'c')] or a
+    # dictionary {'a': 'a', 'b': 'c', 'c': 'b'}. This function turns tuples into
+    # a dictionary.
+    @staticmethod
+    def conversePairsToDict(conversePairs):
+        converseDict = dict()
+        for conversePair in conversePairs:
+            if conversePair[0] == conversePair[1]: # symmetric atom
+                converseDict[conversePair[0]] = conversePair[0]
+            else: # non-symmetric atoms
+                converseDict[conversePair[0]] = conversePair[1]
+                converseDict[conversePair[1]] = conversePair[0]
+        return converseDict
+
     # Give a human readable report on a list of failed axioms, eg. ["R01", "R02", "R07"].
     @staticmethod
     def reportFailedAxioms(failedAxioms):

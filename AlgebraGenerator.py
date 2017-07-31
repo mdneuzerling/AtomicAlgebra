@@ -15,9 +15,12 @@ def atomicIdentity(nAtoms):
 # This construction assumes that the identity fragments form the first nFragments
 # atoms, ie. a three-fragment identity will be the union of a, b and c.
 def fragmentIdentity(nAtoms, nFragments):
-    atoms = [chr(i + 97) for i in range(nAtoms)]
-    return([(atom, atom, atom) for atom in atoms[:nFragments]] + 
-        [(atom1, atom2, 0) for atom1, atom2 in itertools.product(atoms[:nFragments], repeat=2) if atom1 != atom2])
+    if nFragments == 1:
+        return atomicIdentity(nAtoms)
+    else:
+        atoms = [chr(i + 97) for i in range(nAtoms)]
+        return([(atom, atom, atom) for atom in atoms[:nFragments]] + 
+            [(atom1, atom2, 0) for atom1, atom2 in itertools.product(atoms[:nFragments], repeat=2) if atom1 != atom2])
 
 # Given a triple and a converse structure, generate the cycle including that triple.
 # This is an implementation of the relation algebra concept of a Peircean transform.
@@ -127,85 +130,50 @@ def generateAlgebrasFromFixedEntries(entriesToFix, converse, nAtoms, fixIdentity
         if validAlgebra: algebras.append(newAlgebra)
     return algebras
 
-# All 10 possible converse structures.
-# We don't actually need all 10. We only need to consider 3 cases: 
-    # All symmetric.
-    # Just 2 symmetric.
-    # No symmetric.
-# All others will be isomorphic 
-conversesOn4Atoms = [
-        {'a': 'a', 'b': 'b', 'c': 'c', 'd': 'd'}, # all symmetric
-        {'a': 'b', 'b': 'a', 'c': 'c', 'd': 'd'}, # c,d symmetric, (a,b)
-        {'a': 'a', 'b': 'c', 'c': 'b', 'd': 'd'}, # a,d symmetric, (b,c)
-        {'a': 'a', 'b': 'b', 'c': 'd', 'd': 'c'}, # a,b symmetric, (c,d)
-        {'a': 'c', 'b': 'b', 'c': 'a', 'd': 'd'}, # b,d symmetric, (a,c)
-        {'a': 'a', 'b': 'd', 'c': 'c', 'd': 'b'}, # a,c symmetric, (b,d)
-        {'a': 'd', 'b': 'b', 'c': 'c', 'd': 'a'}, # b,c symmetric, (a,d)
-        {'a': 'b', 'b': 'a', 'c': 'd', 'd': 'c'}, # (a,b), (c,d)
-        {'a': 'd', 'b': 'c', 'c': 'b', 'd': 'a'}, # (a,d), (b,c)
-        {'a': 'c', 'b': 'd', 'c': 'a', 'd': 'b'}  # (a,c), (b,d)
-        ]
+    # We may want to build in an assumption that any element not specified in 
+    # the converse structure is assumed to be symmetric. To prepare for this,
+    # we calculate the number of symmetric atoms based on the number of
+    # non-symmetric atoms.
+def generateAlgebrasFromIdentityAndConverse(nAtoms, identitySize, converse):
+    numberSymmetric = nAtoms - len([k for k in converse.keys() if converse[k] != k])
+    creationStatement = "Generating " + str(nAtoms) + "-atom algebras with "
+    if identitySize == 1: 
+        creationStatement += "atomic identity "
+    else:
+        creationStatement += str(identitySize) + "-fragment identity "
+    creationStatement += ("and " + str(numberSymmetric) + " symmetric atom" + 
+                          (numberSymmetric != 1)*"s" + ".")
+    print(creationStatement)
+    algebras = generateAlgebrasFromFixedEntries(
+            fragmentIdentity(nAtoms, identitySize), 
+            converse = converse, nAtoms = nAtoms, fixIdentitySize = True)
+    outcomeStatement = ("Found " + str(len(algebras)) + 
+                             " non-isomorphic algebra" + 
+                             (len(algebras) > 1) * "s" + ".")
+    print(outcomeStatement)
+    return algebras
 
-def gen4Atoms():
-    # Generate all algebras and report on progress along the way.
-    # We generate the algebras in 6 cases according to identity and converse structure.
-    # This reduces the number of isomorphism checks needed.
-    algebras = []
-    print("Generating 4 atom algebras with two-fragment identity, all atoms symmetric.")
-    algebras1 = generateAlgebrasFromFixedEntries(fragmentIdentity(4, 2), conversesOn4Atoms[0], nAtoms = 4, fixIdentitySize = True)
-    print("Found " + str(len(algebras1)) + " non-isomorphic algebra" + (len(algebras1) > 1) * "s" + ".")
-    print("Generating 4 atom algebras with two-fragment identity, only 2 atoms symmetric.")
-    algebras2 = generateAlgebrasFromFixedEntries(fragmentIdentity(4, 2), conversesOn4Atoms[3], nAtoms = 4, fixIdentitySize = True)
-    print("Found " + str(len(algebras2)) + " non-isomorphic algebra" + (len(algebras2) > 1) * "s" + ".")
-    print("Generating 4 atom algebras with three-fragment identity, all atoms symmetric.")
-    algebras3 = generateAlgebrasFromFixedEntries(fragmentIdentity(4, 3), conversesOn4Atoms[0], nAtoms = 4, fixIdentitySize = True)
-    print("Found " + str(len(algebras3)) + " non-isomorphic algebra" + (len(algebras3) > 1) * "s" + ".")
-    print("Generating 4 atom the algebra with four-fragment identity.")
-    algebras4 = generateAlgebrasFromFixedEntries(fragmentIdentity(4, 4), conversesOn4Atoms[0], nAtoms = 4, fixIdentitySize = True)
-    print("Found " + str(len(algebras4)) + " non-isomorphic algebra" + (len(algebras4) > 1) * "s" + ".")
-    print("Generating 4 atom algebras with atomic identity, all atoms symmetric.")
-    algebras5 = generateAlgebrasFromFixedEntries(atomicIdentity(4), conversesOn4Atoms[0], nAtoms = 4, fixIdentitySize = True)
-    print("Found " + str(len(algebras5)) + " non-isomorphic algebra" + (len(algebras5) > 1) * "s" + ".")
-    print("Generating 4 atom algebras with atomic identity, only 2 atoms symmetric.")
-    algebras6 = generateAlgebrasFromFixedEntries(atomicIdentity(4), conversesOn4Atoms[3], nAtoms = 4, fixIdentitySize = True)
-    print("Found " + str(len(algebras6)) + " non-isomorphic algebra" + (len(algebras6) > 1) * "s" + ".")
-    return algebras1 + algebras2 + algebras3 + algebras4 + algebras5 + algebras6
-    
-conversesOn5Atoms = [
-        {'a': 'a', 'b': 'b', 'c': 'c', 'd': 'd', 'e': 'e'}, # all symmetric
-        {'a': 'a', 'b': 'b', 'c': 'c', 'd': 'e', 'e': 'd'}, # a, b, c symmetric, (d, e)
-        {'a': 'a', 'b': 'c', 'c': 'b', 'd': 'e', 'e': 'd'}  # a symmetric, (b, c), (d, e)
-        ]
+def conversesRespectingIdentity(nAtoms, identitySize):
+    converses = []
+    for numberSymmetric in [i for i in range(identitySize, nAtoms + 1) if (nAtoms - i) % 2 == 0]:
+        numberNonSymmetric = nAtoms - numberSymmetric
+        converse = [(chr(i + 97), chr(i + 97)) for i in range(numberSymmetric)]
+        for conversePairStart in [numberSymmetric + j for j in range(numberNonSymmetric) if j % 2 == 0]:
+            converse.append((chr(conversePairStart + 97), chr(conversePairStart + 97 + 1)))
+        converses.append(AtomicAlgebra.conversePairsToDict(converse))
+    return converses
 
-# Struggling to complete with current computational resources.
-def gen5Atoms():
+def generateAlgebras(nAtoms):
     algebras = []
-    print("Generating 5 atom algebras with atomic identity, all atoms symmetric.")
-    algebras1 = generateAlgebrasFromFixedEntries(atomicIdentity(5), conversesOn5Atoms[0], nAtoms = 5, fixIdentitySize = True)
-    print("Found " + str(len(algebras1)) + " non-isomorphic algebra" + (len(algebras1) > 1) * "s" + ".")
-    print("Generating 5 atom algebras with atomic identity, only three atoms symmetric.")
-    algebras2 = generateAlgebrasFromFixedEntries(atomicIdentity(5), conversesOn5Atoms[1], nAtoms = 5, fixIdentitySize = True)
-    print("Found " + str(len(algebras2)) + " non-isomorphic algebra" + (len(algebras2) > 1) * "s" + ".")
-    print("Generating 5 atom algebras with atomic identity, only the identity atom symmetric.")
-    algebras3 = generateAlgebrasFromFixedEntries(atomicIdentity(5), conversesOn5Atoms[2], nAtoms = 5, fixIdentitySize = True)
-    print("Found " + str(len(algebras3)) + " non-isomorphic algebra" + (len(algebras3) > 1) * "s" + ".")
-    print("Generating 5 atom algebras with two-fragment identity, all atoms symmetric.")
-    algebras4 = generateAlgebrasFromFixedEntries(fragmentIdentity(5, 2), conversesOn5Atoms[0], nAtoms = 5, fixIdentitySize = True)
-    print("Found " + str(len(algebras4)) + " non-isomorphic algebra" + (len(algebras4) > 1) * "s" + ".")
-    print("Generating 5 atom algebras with two-fragment identity, one converse pair.")
-    algebras5 = generateAlgebrasFromFixedEntries(fragmentIdentity(5, 2), conversesOn5Atoms[1], nAtoms = 5, fixIdentitySize = True)
-    print("Found " + str(len(algebras5)) + " non-isomorphic algebra" + (len(algebras5) > 1) * "s" + ".") 
-    print("Generating 5 atom algebras with three-fragment identity, all atoms symmetric.")   
-    algebras6 = generateAlgebrasFromFixedEntries(fragmentIdentity(5, 3), conversesOn5Atoms[0], nAtoms = 5, fixIdentitySize = True)
-    print("Found " + str(len(algebras6)) + " non-isomorphic algebra" + (len(algebras6) > 1) * "s" + ".")
-    print("Generating 5 atom algebras with three-fragment identity, one converse pair.")
-    algebras7 = generateAlgebrasFromFixedEntries(fragmentIdentity(5, 3), conversesOn5Atoms[1], nAtoms = 5, fixIdentitySize = True)
-    print("Found " + str(len(algebras7)) + " non-isomorphic algebra" + (len(algebras7) > 1) * "s" + ".")
-    print("Generating 5 atom algebras with four-fragment identity, all atoms symmetric.")   
-    algebras8 = generateAlgebrasFromFixedEntries(fragmentIdentity(5, 4), conversesOn5Atoms[0], nAtoms = 5, fixIdentitySize = True)
-    print("Found " + str(len(algebras8)) + " non-isomorphic algebra" + (len(algebras8) > 1) * "s" + ".")
-    print("Generating 5 atom algebras with five-fragment identity, all atoms symmetric.")   
-    algebras9 = generateAlgebrasFromFixedEntries(fragmentIdentity(5, 5), conversesOn5Atoms[0], nAtoms = 5, fixIdentitySize = True)
-    print("Found " + str(len(algebras9)) + " non-isomorphic algebra" + (len(algebras9) > 1) * "s" + ".")
-    return(algebras1 + algebras2 + algebras3 + algebras4 + algebras5 + 
-           algebras6 + algebras7 + algebras8 + algebras9)
+    for identitySize in range(1, nAtoms + 1):
+        for converse in conversesRespectingIdentity(nAtoms, identitySize):
+            algebras += generateAlgebrasFromIdentityAndConverse(nAtoms, identitySize, converse)
+    return(algebras)
+
+
+
+
+
+
+
+
