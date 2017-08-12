@@ -140,14 +140,24 @@ def converses_respecting_identity(n_atoms, identity_size):
         converses.append(AtomicAlgebra.converse_pairs_to_dict(converse))
     return converses
 
-def generate_algebras(n_atoms):
+# Generate all nonassociative algebras on n_atoms, unique up to isomorphism.
+# By default, a list of instances of the AtomicAlgebra class are returned.
+# If export = True, the output will be a list of 2-tuples, in which the first
+# element is the atom table of the algebra and the second element is the 
+# converse (as pairs). This is useful if we wish to export the algebras to a 
+# text file, where they can alter be created as AtomicAlgebras.
+def generate_algebras(n_atoms, export = False):
     algebras = []
     for identity_size in range(1, n_atoms + 1):
         for converse in converses_respecting_identity(n_atoms, identity_size):
             algebras += generate_algebras_from_identity_and_converse(
                     n_atoms, identity_size, converse, verbose = True
                     )
-    return(algebras)
+    if export:
+        return [(algebra.atom_table, algebra.converse_pairs) 
+                for algebra in algebras]
+    else:
+        return algebras
 
 # Experimental multiprocessing
 
