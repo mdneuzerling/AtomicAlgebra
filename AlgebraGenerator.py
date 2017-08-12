@@ -1,4 +1,4 @@
-from itertools import product
+from itertools import product, chain
 from sys import platform
 import multiprocessing as mp
 
@@ -148,3 +148,27 @@ def generate_algebras(n_atoms):
                     n_atoms, identity_size, converse, verbose = True
                     )
     return(algebras)
+
+# Experimental multiprocessing
+
+def generate_algebra_args(n_atoms):
+    args = []
+    for identity_size in range(1, n_atoms + 1):
+        for converse in converses_respecting_identity(n_atoms, identity_size):
+            args.append([n_atoms, identity_size, converse])
+    return(args)
+
+def generate_algebras_from_identity_and_converse_star(arg):
+    return generate_algebras_from_identity_and_converse(*arg)
+
+def generate_algebras_parallel(n_atoms):
+    if platform == "win32":
+        return "Don't do this on Windows."
+    args = generate_algebra_args(n_atoms)
+    pool = mp.Pool(processes = mp.cpu_count())
+    partitioned_algebras = pool.map(generate_algebras_from_identity_and_converse_star, args)
+    pool.close()
+    pool.join()
+    return list(chain.from_iterable(partitioned_algebras))
+    
+    
